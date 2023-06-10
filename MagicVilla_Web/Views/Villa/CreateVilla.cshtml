@@ -1,6 +1,6 @@
 ﻿@model MagicVilla_Web.Models.Dto.VillaCreateDTO
 
-<form asp-action="CreateVilla">
+<form asp-action="CreateVilla" enctype="multipart/form-data">
     <br />
     <div class="container border p-3">
         <h1 class="text-primary">Create Villa</h1>
@@ -30,14 +30,15 @@
             </div>
             <div class="col-10 pb-3">
                 <textarea asp-for="Details" class="form-control" rows="5" ></textarea>
-                <span asp-validation-for="Details" class="text-danger"></span>
+                <span asp-validation-for="Details" class="text-danger" ></span>
             </div>
 
             <div class="col-2">
                 <label asp-for="ImageUrl" class="control-label pt-2" style="font-size:20px;"></label>
             </div>
             <div class="col-10 pb-3">
-                <input asp-for="ImageUrl" class="form-control" />
+                <input asp-for="Image" class="form-control" />
+                <input asp-for="ImageUrl" class="form-control" hidden />
                 <span asp-validation-for="ImageUrl" class="text-danger"></span>
             </div>
 
