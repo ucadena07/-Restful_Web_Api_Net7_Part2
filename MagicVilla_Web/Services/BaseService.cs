@@ -35,7 +35,7 @@ namespace MagicVilla_Web.Services
                 }
    
                 message.RequestUri = new Uri(apiRequest.Url);
-                if(_tokenProvider.GetToken() != null)
+                if(apiRequest.WithBearer && _tokenProvider.GetToken() != null)
                 {
                    var token = _tokenProvider.GetToken();
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
