@@ -4,6 +4,7 @@ using MagicVilla_VillaAPI.Models;
 using MagicVilla_VillaAPI.Models.Dto;
 using MagicVilla_VillaAPI.Repository.IRepostiory;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -103,8 +104,66 @@ namespace MagicVilla_VillaAPI.Repository
 
         public async Task<TokenDTO> RefreshAccessToken(TokenDTO token)
         {
+            //find existing refreshtoken
+            var existingRefreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.Refresh_Token == token.RefreshToken);
+            if (existingRefreshToken == null)
+            {
+                return new();
+            }
 
-            throw new NotImplementedException();    
+            //compare data
+            var accessTokenData = GetAccessTokenData(token.AccessToken);
+
+            if (!accessTokenData.IsSuccessful || accessTokenData.userId != existingRefreshToken.UserId
+                || accessTokenData.tokenId != existingRefreshToken.JwtTokenId)
+            {
+                existingRefreshToken.IsValid = false;
+                _db.RefreshTokens.Update(existingRefreshToken);
+                _db.SaveChanges();
+                return new();
+            }
+
+
+            //check if valid
+
+
+            //check expire time
+            if(existingRefreshToken.ExpireAt < DateTime.UtcNow)
+            {
+                existingRefreshToken.IsValid = false;
+                _db.RefreshTokens.Update(existingRefreshToken);
+                _db.SaveChanges();
+                return new();
+            }
+
+            //replace old refresh 
+            var newRefreshToken = await CreateNewRefreshToken(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+
+            //mark old refresh as invalid
+            if (existingRefreshToken.ExpireAt < DateTime.UtcNow)
+            {
+                existingRefreshToken.IsValid = false;
+                _db.RefreshTokens.Update(existingRefreshToken);
+                _db.SaveChanges();
+                return new();
+            }
+            //generate new access token
+            var appicationUser = _db.ApplicationUsers.FirstOrDefault(x => x.Id == existingRefreshToken.UserId);
+            if(appicationUser == null)
+            {
+                return new();
+            }
+
+            var newAccessToken = await GetAccessToken(appicationUser, existingRefreshToken.JwtTokenId);
+
+
+            //return new 
+
+            return new()
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+            };
         }
 
         async Task<string> GetAccessToken(ApplicationUser user, string jwtTokenId)
