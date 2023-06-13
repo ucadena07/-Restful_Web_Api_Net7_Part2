@@ -57,9 +57,11 @@ namespace MagicVilla_VillaAPI.Repository
 
             var jwtTokenId = $"JTI{Guid.NewGuid()}";
             var jwtToken = await GetAccessToken(user, jwtTokenId);
+            var refreshToken = await CreateNewRefreshToken(user.Id, jwtTokenId);
             TokenDTO loginResponseDTO = new TokenDTO()
             {
-                AccessToken = jwtToken
+                AccessToken = jwtToken,
+                RefreshToken = refreshToken
 
             };
             return loginResponseDTO;
@@ -121,12 +123,27 @@ namespace MagicVilla_VillaAPI.Repository
                     new Claim(JwtRegisteredClaimNames.Jti, jwtTokenId),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id)
                 }),
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddMinutes(60),
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        private async Task<string> CreateNewRefreshToken(string userId, string tokenId)
+        {
+            RefreshToken refreshToken = new()
+            {
+                IsValid = true,
+                UserId = userId,
+                JwtTokenId = tokenId,
+                ExpireAt = DateTime.UtcNow.AddDays(30),
+                Refresh_Token = Guid.NewGuid() + "-" + Guid.NewGuid(),
+            };
+            await _db.RefreshTokens.AddAsync(refreshToken);
+            await _db.SaveChangesAsync();
+            return refreshToken.Refresh_Token;
         }
 
         private (bool IsSuccessful, string userId, string tokenId) GetAccessTokenData(string accessToken)
