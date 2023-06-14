@@ -80,7 +80,7 @@ namespace MagicVilla_VillaAPI.Controllers
                 {
                     _response.StatusCode = HttpStatusCode.OK;
                     _response.IsSuccess = true;
-                    _response.Result = tokenDTO;    
+                    _response.Result = tokenDTOReponse;    
                     return Ok(_response);
                 }
 

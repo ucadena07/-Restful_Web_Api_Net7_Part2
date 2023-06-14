@@ -68,33 +68,34 @@ namespace MagicVilla_VillaAPI.Repository
             return loginResponseDTO;
         }
 
-        public async Task<UserDTO> Register(RegisterationRequestDTO registerationRequestDTO)
+        public async Task<UserDTO> Register(RegisterationRequestDTO registrationRequestDTO)
         {
             ApplicationUser user = new()
             {
-                UserName = registerationRequestDTO.UserName,
-                Email=registerationRequestDTO.UserName,
-                NormalizedEmail=registerationRequestDTO.UserName.ToUpper(),
-                Name = registerationRequestDTO.Name
+                UserName = registrationRequestDTO.UserName,
+                Email = registrationRequestDTO.UserName,
+                NormalizedEmail = registrationRequestDTO.UserName.ToUpper(),
+                Name = registrationRequestDTO.Name
             };
 
             try
             {
-                var result = await _userManager.CreateAsync(user, registerationRequestDTO.Password);
+                var result = await _userManager.CreateAsync(user, registrationRequestDTO.Password);
                 if (result.Succeeded)
                 {
-                    if (!_roleManager.RoleExistsAsync(registerationRequestDTO.Role).GetAwaiter().GetResult()){
-                        await _roleManager.CreateAsync(new IdentityRole(registerationRequestDTO.Role));
- 
+                    if (!_roleManager.RoleExistsAsync(registrationRequestDTO.Role).GetAwaiter().GetResult())
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole(registrationRequestDTO.Role));
+
                     }
-                    await _userManager.AddToRoleAsync(user, registerationRequestDTO.Role);
+                    await _userManager.AddToRoleAsync(user, registrationRequestDTO.Role);
                     var userToReturn = _db.ApplicationUsers
-                        .FirstOrDefault(u => u.UserName == registerationRequestDTO.UserName);
+                        .FirstOrDefault(u => u.UserName == registrationRequestDTO.UserName);
                     return _mapper.Map<UserDTO>(userToReturn);
 
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
 
             }
@@ -125,10 +126,21 @@ namespace MagicVilla_VillaAPI.Repository
 
 
             //check if valid
+            if (!existingRefreshToken.IsValid)
+            {
+                var chainRecords = _db.RefreshTokens
+                    .Where(x => x.UserId == existingRefreshToken.UserId
+                    && x.JwtTokenId == existingRefreshToken.JwtTokenId)
+                    .ExecuteUpdate(x => x.SetProperty(refreshToken => refreshToken.IsValid, false));
+
+                return new();
+            }
+
+
 
 
             //check expire time
-            if(existingRefreshToken.ExpireAt < DateTime.UtcNow)
+            if (existingRefreshToken.ExpireAt < DateTime.UtcNow)
             {
                 existingRefreshToken.IsValid = false;
                 _db.RefreshTokens.Update(existingRefreshToken);
@@ -149,12 +161,17 @@ namespace MagicVilla_VillaAPI.Repository
             }
             //generate new access token
             var appicationUser = _db.ApplicationUsers.FirstOrDefault(x => x.Id == existingRefreshToken.UserId);
-            if(appicationUser == null)
+            if (appicationUser == null)
             {
                 return new();
             }
 
             var newAccessToken = await GetAccessToken(appicationUser, existingRefreshToken.JwtTokenId);
+
+            existingRefreshToken.IsValid = false;
+            _db.RefreshTokens.Update(existingRefreshToken);
+            _db.SaveChanges();
+
 
 
             //return new 
@@ -182,7 +199,7 @@ namespace MagicVilla_VillaAPI.Repository
                     new Claim(JwtRegisteredClaimNames.Jti, jwtTokenId),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id)
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(60),
+                Expires = DateTime.UtcNow.AddMinutes(1),
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -197,7 +214,7 @@ namespace MagicVilla_VillaAPI.Repository
                 IsValid = true,
                 UserId = userId,
                 JwtTokenId = tokenId,
-                ExpireAt = DateTime.UtcNow.AddDays(30),
+                ExpireAt = DateTime.UtcNow.AddMinutes(3),
                 Refresh_Token = Guid.NewGuid() + "-" + Guid.NewGuid(),
             };
             await _db.RefreshTokens.AddAsync(refreshToken);
@@ -213,7 +230,7 @@ namespace MagicVilla_VillaAPI.Repository
                 var jwt = tokenHandler.ReadJwtToken(accessToken);
                 var jwtTokenId = jwt.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
                 var userId = jwt.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
-                return (true,userId,jwtTokenId);
+                return (true, userId, jwtTokenId);
             }
             catch (Exception)
             {
@@ -221,6 +238,6 @@ namespace MagicVilla_VillaAPI.Repository
                 return (false, null, null);
             }
         }
-        
+
     }
 }
