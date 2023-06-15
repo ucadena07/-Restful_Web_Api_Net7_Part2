@@ -118,11 +118,7 @@ namespace MagicVilla_Web.Services
 
                 HttpResponseMessage apiResponse = null;
 
-                if (!string.IsNullOrEmpty(apiRequest.Token))
-                {
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiRequest.Token);
-                }
-
+       
                 apiResponse = await SendWithRefreshTokenAsync(client, messageFactory,apiRequest.WithBearer);
 
                 var apiContent = await apiResponse.Content.ReadAsStringAsync();
@@ -221,7 +217,7 @@ namespace MagicVilla_Web.Services
             var content = await resp.Content.ReadAsStringAsync();
             var apiResponse = JsonConvert.DeserializeObject<APIResponse>(content);
 
-            if (apiResponse?.IsSuccess != null)
+            if (apiResponse?.IsSuccess != true)
             {
                 await _httpContextAccessor.HttpContext.SignOutAsync();
                 _tokenProvider.ClearToken();
