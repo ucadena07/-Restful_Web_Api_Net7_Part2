@@ -75,16 +75,22 @@ namespace MagicVilla_Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateVilla(VillaUpdateDTO model)
         {
+            APIResponse response = new();
             if (ModelState.IsValid)
             {
                 TempData["success"] = "Villa updated successfully";
-                var response = await _villaService.UpdateAsync<APIResponse>(model);
+                 response = await _villaService.UpdateAsync<APIResponse>(model);
                 if (response != null && response.IsSuccess)
                 {
                     return RedirectToAction(nameof(IndexVilla));
                 }
+                else
+                {
+                    TempData["error"] = (response.ErrorMessages! != null && response.ErrorMessages.Any()) ?
+                        response.ErrorMessages[0] : "error encounter";
+                }
             }
-            TempData["error"] = "Error encountered.";
+      
             return View(model);
         }
         [Authorize(Roles = "admin")]
