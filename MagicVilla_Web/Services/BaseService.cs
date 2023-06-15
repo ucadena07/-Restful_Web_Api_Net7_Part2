@@ -4,8 +4,12 @@ using MagicVilla_Web.Models;
 using MagicVilla_Web.Models.Dto;
 using MagicVilla_Web.Services.IServices;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Newtonsoft.Json;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
+using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 
 namespace MagicVilla_Web.Services
@@ -179,11 +183,22 @@ namespace MagicVilla_Web.Services
                     {
                         return resp;
                     }
+                    if(!resp.IsSuccessStatusCode && resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        await InvokeRefreshTokenEndpoint(httpClient, tokenDTO.AccessToken,tokenDTO.RefreshToken);
+                        resp = await httpClient.SendAsync(httpRequestMessageFactory());
+                        return resp;
+                    }
                     return resp;
                 }
-                catch (Exception)
+                catch (HttpRequestException ex)
                 {
-
+                    if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        await InvokeRefreshTokenEndpoint(httpClient, tokenDTO.AccessToken, tokenDTO.RefreshToken);
+                        resp = await httpClient.SendAsync(httpRequestMessageFactory());
+                        return resp;
+                    }
                     throw;
                 }
 
@@ -217,11 +232,26 @@ namespace MagicVilla_Web.Services
                 var tokenDto = JsonConvert.DeserializeObject<TokenDTO>(tokenDataStr);
 
                 if(tokenDto != null && !string.IsNullOrEmpty(tokenDto.AccessToken)) 
-                { 
+                {
+                    await SignInWithNewTokens(tokenDto);
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenDto.AccessToken);
+
                 }
             }
+        }
 
+        async Task SignInWithNewTokens(TokenDTO tokenDTO)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(tokenDTO.AccessToken);
 
+            var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
+            identity.AddClaim(new Claim(ClaimTypes.Name, jwt.Claims.FirstOrDefault(u => u.Type == "unique_name").Value));
+            identity.AddClaim(new Claim(ClaimTypes.Role, jwt.Claims.FirstOrDefault(u => u.Type == "role").Value));
+            var principal = new ClaimsPrincipal(identity);
+            await _httpContextAccessor.HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+            _tokenProvider.SetToken(tokenDTO);
         }
     }
 }
