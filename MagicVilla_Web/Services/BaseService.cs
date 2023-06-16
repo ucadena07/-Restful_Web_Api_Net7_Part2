@@ -154,6 +154,10 @@ namespace MagicVilla_Web.Services
     
                     
                 }
+                catch(AuthException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     FinalApiReponse.ErrorMessages = new List<string>() { "Error encounter" };
@@ -163,7 +167,11 @@ namespace MagicVilla_Web.Services
                 return returnObj;
 
             }
-            catch(Exception e)
+            catch (AuthException)
+            {
+                throw;
+            }
+            catch (Exception e)
             {
                 var dto = new APIResponse
                 {
@@ -206,6 +214,10 @@ namespace MagicVilla_Web.Services
                     }
                     return resp;
                 }
+                catch(AuthException authEx)
+                {
+                    throw;
+                }
                 catch (HttpRequestException ex)
                 {
                     if (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
@@ -240,6 +252,7 @@ namespace MagicVilla_Web.Services
             {
                 await _httpContextAccessor.HttpContext.SignOutAsync();
                 _tokenProvider.ClearToken();
+                throw new AuthException();
             }
             else
             {

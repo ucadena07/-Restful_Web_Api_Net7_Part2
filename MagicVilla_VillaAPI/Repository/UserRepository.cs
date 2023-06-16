@@ -214,7 +214,7 @@ namespace MagicVilla_VillaAPI.Repository
                 IsValid = true,
                 UserId = userId,
                 JwtTokenId = tokenId,
-                ExpireAt = DateTime.UtcNow.AddMinutes(3),
+                ExpireAt = DateTime.UtcNow.AddMinutes(2),
                 Refresh_Token = Guid.NewGuid() + "-" + Guid.NewGuid(),
             };
             await _db.RefreshTokens.AddAsync(refreshToken);
