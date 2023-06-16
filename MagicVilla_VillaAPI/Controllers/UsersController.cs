@@ -36,6 +36,20 @@ namespace MagicVilla_VillaAPI.Controllers
             return Ok(_response);
         }
 
+        [HttpPost("revoke")]
+        public async Task<IActionResult> Revoke([FromBody] TokenDTO model)
+        {
+            if (ModelState.IsValid)
+            {
+                await _userRepo.RevokeRefreshTokens(model);
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                return Ok(_response);
+            }
+            return BadRequest(_response);
+
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterationRequestDTO model)
         {
@@ -45,7 +59,7 @@ namespace MagicVilla_VillaAPI.Controllers
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 _response.IsSuccess = false;
                 _response.ErrorMessages.Add("Username already exists");
-                return BadRequest(_response);
+      
             }
 
             var user = await _userRepo.Register(model);

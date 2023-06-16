@@ -68,6 +68,29 @@ namespace MagicVilla_VillaAPI.Repository
             return loginResponseDTO;
         }
 
+        public async Task RevokeRefreshTokens(TokenDTO token)
+        {
+            var existingRefreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(
+                it => it.Refresh_Token == token.RefreshToken
+                );
+            if (existingRefreshToken == null)
+            {
+                return;
+            }
+
+            var accessTokenData = GetAccessTokenData(token.AccessToken);
+
+            if(!accessTokenData.IsSuccessful)
+            {
+                return;
+            }
+            var chainRecords = _db.RefreshTokens
+           .Where(x => x.UserId == existingRefreshToken.UserId
+           && x.JwtTokenId == existingRefreshToken.JwtTokenId)
+           .ExecuteUpdate(x => x.SetProperty(refreshToken => refreshToken.IsValid, false));
+
+        }
+
         public async Task<UserDTO> Register(RegisterationRequestDTO registrationRequestDTO)
         {
             ApplicationUser user = new()
@@ -199,7 +222,7 @@ namespace MagicVilla_VillaAPI.Repository
                     new Claim(JwtRegisteredClaimNames.Jti, jwtTokenId),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id)
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(1),
+                Expires = DateTime.UtcNow.AddMinutes(3),
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -214,7 +237,7 @@ namespace MagicVilla_VillaAPI.Repository
                 IsValid = true,
                 UserId = userId,
                 JwtTokenId = tokenId,
-                ExpireAt = DateTime.UtcNow.AddMinutes(2),
+                ExpireAt = DateTime.UtcNow.AddMinutes(4),
                 Refresh_Token = Guid.NewGuid() + "-" + Guid.NewGuid(),
             };
             await _db.RefreshTokens.AddAsync(refreshToken);
@@ -239,5 +262,6 @@ namespace MagicVilla_VillaAPI.Repository
             }
         }
 
+    
     }
 }

@@ -9,5 +9,6 @@ namespace MagicVilla_VillaAPI.Repository.IRepostiory
         Task<TokenDTO> Login(LoginRequestDTO loginRequestDTO);
         Task<TokenDTO> RefreshAccessToken(TokenDTO token);
         Task<UserDTO> Register(RegisterationRequestDTO registerationRequestDTO);
+        Task RevokeRefreshTokens(TokenDTO token);
     }
 }
