@@ -9,6 +9,7 @@ namespace MagicVilla_VillaAPI.Controllers
     [Route("api/v{version:apiVersion}/UsersAuth")]
     [ApiController]
     [ApiVersionNeutral]
+    
     public class UsersController : Controller
     {
         private readonly IUserRepository _userRepo;
@@ -23,6 +24,12 @@ namespace MagicVilla_VillaAPI.Controllers
         public async Task<IActionResult> Error()
         {
             throw new FileNotFoundException();
+        }
+
+        [HttpGet("ImageError")]
+        public async Task<IActionResult> ImageError()
+        {
+            throw new BadImageFormatException("Fake image exception");
         }
 
         [HttpPost("login")]
